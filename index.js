@@ -26,9 +26,8 @@ if (! BOT_ADMIN_IDS) {
 const adminIds = BOT_ADMIN_IDS.split(',').map(v => Number(v)).filter(v => v);
 logger.info("Bot admins: " + adminIds);
 
-function getFilename(ctx) {
-    return `${ctx.from.username}_${ctx.from.first_name || ''}_${ctx.from.last_name || ''}`
-        .replace(/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/g, '_');
+function fixFilename(str) {
+    return str.replace(/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/g, '_');
 }
 async function log(ctx, next) {
     logger.info(`${ctx.message.text} | ${ctx.from.first_name || ''} ${ctx.from.last_name || ''} #${ctx.from.id} @${ctx.from.username}`);
@@ -71,11 +70,19 @@ bot.command('start', log, userAuth, async (ctx) => {
 });
 bot.command('ovpn', log, userAuth, async (ctx) => {
     try {
-        const filename = getFilename(ctx);
-        if (! fs.existsSync(path.join(ovpnPath, filename + '.ovpn'))) {
-            childProcess.execSync(`MENU_OPTION="1" CLIENT="${filename}" PASS="1" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+        const filenames = fs.readdirSync(ovpnPath);
+        const oldFilename = filenames.find(f => f.startsWith("id" + ctx.from.id));
+        if (oldFilename) {
+            childProcess.execSync(`MENU_OPTION="2" CLIENT="${oldFilename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
         }
-        await ctx.replyWithDocument({ source: path.join(ovpnPath, filename + '.ovpn'), caption: filename });
+
+        const filename = `id${ctx.from.id}_${ctx.from.username}_${ctx.from.first_name || ''}_${ctx.from.last_name || ''}_${Date.now()}`;
+        childProcess.execSync(`MENU_OPTION="1" CLIENT="${filename}" PASS="1" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+
+        await ctx.replyWithDocument({
+            source: path.join(ovpnPath, filename + '.ovpn'),
+            caption: `${ctx.from.username}.ovpn`
+        });
     } catch (err) {
         ctx.reply("failed");
         logger.error(err);
