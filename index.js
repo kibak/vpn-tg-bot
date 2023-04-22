@@ -81,7 +81,7 @@ bot.command('ovpn', log, userAuth, async (ctx) => {
 
         await ctx.replyWithDocument({
             source: path.join(ovpnPath, filename + '.ovpn'),
-            caption: `${ctx.from.username}.ovpn`
+            filename: `${ctx.from.username}.ovpn`
         });
     } catch (err) {
         ctx.reply("failed");
