@@ -104,9 +104,13 @@ bot.command('revoke', log, adminAuth, async (ctx) => {
     try {
         const num = Number(ctx.message.text.split(" ").pop());
         const files = fs.readdirSync(ovpnPath);
-        const filename = files[num];
-        childProcess.execSync(`MENU_OPTION="2" CLIENT="${filename}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
-        ctx.reply(filename + " revoked.");
+        const filename = files[num].slice(0,-5);
+        if (filename) {
+            childProcess.execSync(`MENU_OPTION="2" CLIENT="${filename}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+            ctx.reply(filename + " revoked.");
+        } else {
+            ctx.reply("wrong command");
+        }
     } catch (err) {
         ctx.reply("failed");
         logger.error(err);
