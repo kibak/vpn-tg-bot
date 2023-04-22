@@ -72,7 +72,14 @@ bot.command('ovpn', log, userAuth, async (ctx) => {
     try {
         const filenames = fs.readdirSync(ovpnPath);
         const oldFilename = filenames.find(f => f.startsWith("id" + ctx.from.id));
+
         if (oldFilename) {
+            if ((Date.now() - Date.parse(fs.statSync(path.join(ovpnPath,oldFilename)).birthtime)) < 864000000) {
+                return await ctx.replyWithDocument({
+                    source: path.join(ovpnPath, oldFilename + '.ovpn'),
+                    filename: `${ctx.from.username}.ovpn`
+                });
+            }
             childProcess.execSync(`MENU_OPTION="2" CLIENT="${oldFilename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
         }
 
