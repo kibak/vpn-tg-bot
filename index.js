@@ -76,7 +76,7 @@ bot.command('ovpn', log, userAuth, async (ctx) => {
         if (oldFilename) {
             if ((Date.now() - Date.parse(fs.statSync(path.join(ovpnPath,oldFilename)).birthtime)) < 864000000) {
                 return await ctx.replyWithDocument({
-                    source: path.join(ovpnPath, oldFilename + '.ovpn'),
+                    source: path.join(ovpnPath, oldFilename),
                     filename: `${ctx.from.username}.ovpn`
                 });
             }
