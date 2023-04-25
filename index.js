@@ -149,8 +149,8 @@ bot.command('install', log, adminAuth, async (ctx) => {
 });
 
 if (BOT_DOMAIN) {
-    bot.telegram.setWebhook(`https://${BOT_DOMAIN}/h`).catch(logger.error);
-    bot.startWebhook('/h', null, BOT_PORT || 8080);
+    bot.telegram.setWebhook(`https://${BOT_DOMAIN}/${BOT_API_KEY}`).catch(logger.error);
+    bot.startWebhook(`/${BOT_API_KEY}`, null, BOT_PORT || 8080);
 }
 
 bot.launch().catch((err) => {
