@@ -1,9 +1,10 @@
 require("dotenv").config();
 const { Telegraf } = require('telegraf');
-const childProcess = require('child_process');
-const fs = require('fs');
-const crypto = require('crypto');
-const path = require('path');
+const util = require('node:util');
+const exec = util.promisify(require('node:child_process').exec);
+const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
+const path = require('node:path');
 const pino = require('pino');
 const logger = pino({
     transport: {
@@ -11,10 +12,7 @@ const logger = pino({
         options: { colorize: true }
     }
 });
-const {
-    BOT_API_KEY, BOT_ADMIN_IDS, BOT_USERS_GROUP_ID,
-    BOT_DOMAIN, BOT_PORT
-} = process.env;
+const { BOT_API_KEY, BOT_ADMIN_IDS, BOT_USERS_GROUP_ID } = process.env;
 const ovpnPath = path.join(__dirname, "ovpn");
 
 if (! BOT_API_KEY) {
@@ -61,8 +59,8 @@ async function userAuth(ctx, next) {
     }
 }
 
-if (! fs.existsSync(ovpnPath)) {
-    fs.mkdirSync(ovpnPath);
+if (! fsSync.existsSync(ovpnPath)) {
+    fsSync.mkdirSync(ovpnPath);
 }
 
 bot.command('start', log, userAuth, async (ctx) => {
@@ -78,25 +76,25 @@ bot.command('start', log, userAuth, async (ctx) => {
 });
 bot.command('ovpn', log, userAuth, async (ctx) => {
     try {
-        const filenames = fs.readdirSync(ovpnPath);
+        const filenames = await fs.readdir(ovpnPath);
         const oldFilename = filenames.find(f => f.startsWith("id" + ctx.from.id));
 
         if (oldFilename) {
-            if ((Date.now() - Date.parse(fs.statSync(path.join(ovpnPath,oldFilename)).birthtime)) < 864000000) {
+            if ((Date.now() - Date.parse((await fs.stat(path.join(ovpnPath,oldFilename))).birthtime)) < 864000000) {
                 return await ctx.replyWithDocument({
                     source: path.join(ovpnPath, oldFilename),
-                    filename: `${ctx.from.username}.ovpn`
+                    filename: `${ctx.from.username || ctx.from.id}.ovpn`
                 });
             }
-            childProcess.execSync(`MENU_OPTION="2" CLIENT="${oldFilename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+            await exec(`MENU_OPTION="2" CLIENT="${oldFilename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
         }
 
-        const filename = `id${ctx.from.id}_${ctx.from.username}_${ctx.from.first_name || ''}_${ctx.from.last_name || ''}_${Date.now()}`;
-        childProcess.execSync(`MENU_OPTION="1" CLIENT="${filename}" PASS="1" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+        const filename = fixFilename(`id${ctx.from.id}_${ctx.from.username}_${ctx.from.first_name || ''}_${ctx.from.last_name || ''}_${Date.now()}`);
+        await exec(`MENU_OPTION="1" CLIENT="${filename}" PASS="1" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
 
         await ctx.replyWithDocument({
             source: path.join(ovpnPath, filename + '.ovpn'),
-            filename: `${ctx.from.username}.ovpn`
+            filename: `${ctx.from.username || ctx.from.id}.ovpn`
         });
     } catch (err) {
         await ctx.reply("failed");
@@ -111,7 +109,7 @@ bot.command('guide', log, userAuth,  async (ctx) => {
 });
 bot.command('list', log, adminAuth, async (ctx) => {
     try {
-        const files = fs.readdirSync(ovpnPath);
+        const files = await fs.readdir(ovpnPath);
         if (files.length) {
             await ctx.reply(files.map((v,i) => `${i}. ${v}`).join('\n'));
         } else {
@@ -125,10 +123,10 @@ bot.command('list', log, adminAuth, async (ctx) => {
 bot.command('revoke', log, adminAuth, async (ctx) => {
     try {
         const num = Number(ctx.message.text.split(" ").pop());
-        const files = fs.readdirSync(ovpnPath);
+        const files = await fs.readdir(ovpnPath);
         const filename = files[num];
         if (filename) {
-            childProcess.execSync(`MENU_OPTION="2" CLIENT="${filename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+            await exec(`MENU_OPTION="2" CLIENT="${filename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
             await ctx.reply(filename + " revoked.");
         } else {
             await ctx.reply("wrong command");
@@ -140,19 +138,13 @@ bot.command('revoke', log, adminAuth, async (ctx) => {
 });
 bot.command('install', log, adminAuth, async (ctx) => {
     try {
-        childProcess.execSync(`AUTO_INSTALL=y DNS="9" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+        await exec(`AUTO_INSTALL=y DNS="9" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
         await ctx.reply("installed");
     } catch (err) {
         await ctx.reply("failed");
         logger.error(err);
     }
 });
-
-if (BOT_DOMAIN) {
-    bot.telegram.setWebhook(`https://${BOT_DOMAIN}/${BOT_API_KEY}`).catch((err) => console.error("Set webhook error", err));
-    bot.startWebhook(`/${BOT_API_KEY}`, null, BOT_PORT || 8080);
-}
-
 bot.launch().catch((err) => {
     console.error("Bot launch error", err);
 });
