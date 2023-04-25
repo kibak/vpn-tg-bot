@@ -149,12 +149,12 @@ bot.command('install', log, adminAuth, async (ctx) => {
 });
 
 if (BOT_DOMAIN) {
-    bot.telegram.setWebhook(`https://${BOT_DOMAIN}/${BOT_API_KEY}`).catch(logger.error);
+    bot.telegram.setWebhook(`https://${BOT_DOMAIN}/${BOT_API_KEY}`).catch((err) => console.error("Set webhook error", err));
     bot.startWebhook(`/${BOT_API_KEY}`, null, BOT_PORT || 8080);
 }
 
 bot.launch().catch((err) => {
-    logger.error("Bot launch error: " + err);
+    console.error("Bot launch error", err);
 });
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
