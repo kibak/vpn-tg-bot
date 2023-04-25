@@ -2,6 +2,7 @@ require("dotenv").config();
 const { Telegraf } = require('telegraf');
 const childProcess = require('child_process');
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const pino = require('pino');
 const logger = pino({
@@ -10,14 +11,17 @@ const logger = pino({
         options: { colorize: true }
     }
 });
-const { BOT_API_KEY, BOT_ADMIN_IDS, BOT_USERS_GROUP_ID } = process.env;
+const {
+    BOT_API_KEY, BOT_ADMIN_IDS, BOT_USERS_GROUP_ID,
+    BOT_DOMAIN, BOT_PORT
+} = process.env;
 const ovpnPath = path.join(__dirname, "ovpn");
 
 if (! BOT_API_KEY) {
     return logger.error("Startup error: env BOT_API_KEY is empty!");
 }
 const bot = new Telegraf(BOT_API_KEY, {
-    telegram: { privateChat: true }
+    telegram: { webhookReply: Boolean(BOT_DOMAIN) }
 });
 
 if (! BOT_ADMIN_IDS) {
@@ -146,5 +150,16 @@ bot.command('install', log, adminAuth, async (ctx) => {
     }
 });
 
+bot.launch(BOT_DOMAIN ? {
+    dropPendingUpdates: true,
+    webhook: {
+        domain: BOT_DOMAIN,
+        port: BOT_PORT || 8080,
+        secretToken: crypto.randomBytes(64).toString("hex"),
+    },
+} : {}).catch((err) => {
+    logger.error("Bot launch error: " + err);
+});
 
-bot.launch();
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
