@@ -20,9 +20,7 @@ const ovpnPath = path.join(__dirname, "ovpn");
 if (! BOT_API_KEY) {
     return logger.error("Startup error: env BOT_API_KEY is empty!");
 }
-const bot = new Telegraf(BOT_API_KEY, {
-    telegram: { webhookReply: Boolean(BOT_DOMAIN) }
-});
+const bot = new Telegraf(BOT_API_KEY);
 
 if (! BOT_ADMIN_IDS) {
     return logger.error("Startup error: env BOT_ADMIN_IDS is empty!");
@@ -150,14 +148,12 @@ bot.command('install', log, adminAuth, async (ctx) => {
     }
 });
 
-bot.launch(BOT_DOMAIN ? {
-    dropPendingUpdates: true,
-    webhook: {
-        domain: BOT_DOMAIN,
-        port: BOT_PORT || 8080,
-        secretToken: crypto.randomBytes(64).toString("hex"),
-    },
-} : {}).catch((err) => {
+if (BOT_DOMAIN) {
+    bot.telegram.setWebhook(`https://${BOT_DOMAIN}/h`).catch(logger.error);
+    bot.startWebhook('/h', null, BOT_PORT || 8080);
+}
+
+bot.launch().catch((err) => {
     logger.error("Bot launch error: " + err);
 });
 
