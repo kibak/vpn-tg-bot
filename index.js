@@ -145,7 +145,7 @@ bot.command('install', log, adminAuth, async (ctx) => {
         logger.error(err);
     }
 });
-bot.launch().catch((err) => {
+bot.launch({ dropPendingUpdates: true }).catch((err) => {
     console.error("Bot launch error", err);
 });
 
