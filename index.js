@@ -34,21 +34,27 @@ async function log(ctx, next) {
     await next();
 }
 async function adminAuth(ctx, next) {
-    if (ctx.chat.type === 'private' && adminIds.includes(ctx.from.id)) {
+    if (ctx.chat.type !== 'private') return await ctx.reply("пиши в личку бота");
+    if (adminIds.includes(ctx.from.id)) {
         await next();
+    } else {
+        return await ctx.reply("deprecated bot");
     }
 }
 async function userAuth(ctx, next) {
-    if (ctx.chat.type === 'private') {
-        if (adminIds.includes(ctx.from.id)) {
-            await next();
-        } else {
-            try {
-                const member = await ctx.telegram.getChatMember(BOT_USERS_GROUP_ID, ctx.from.id);
-                if (member) {
-                    await next();
-                }
-            } catch (e) {}
+    if (ctx.chat.type !== 'private') return await ctx.reply("пиши в личку бота");
+    if (adminIds.includes(ctx.from.id)) {
+        await next();
+    } else {
+        try {
+            const member = await ctx.telegram.getChatMember(BOT_USERS_GROUP_ID, ctx.from.id);
+            if (member) {
+                await next();
+            } else {
+                await ctx.reply("deprecated bot");
+            }
+        } catch (e) {
+            await ctx.reply("deprecated bot");
         }
     }
 }
@@ -66,7 +72,7 @@ bot.command('start', log, userAuth, async (ctx) => {
         '/revoke {num} - remove client by number\n---\n---\n' +
         '/install - install openvpn on server\n---\n';
 
-    ctx.reply(adminIds.includes(ctx.from.id) ? adminReply : userReply);
+    await ctx.reply(adminIds.includes(ctx.from.id) ? adminReply : userReply);
 });
 bot.command('ovpn', log, userAuth, async (ctx) => {
     try {
@@ -91,12 +97,12 @@ bot.command('ovpn', log, userAuth, async (ctx) => {
             filename: `${ctx.from.username}.ovpn`
         });
     } catch (err) {
-        ctx.reply("failed");
+        await ctx.reply("failed");
         logger.error(err);
     }
 });
 bot.command('guide', log, userAuth,  async (ctx) => {
-    ctx.reply(
+    await ctx.reply(
         'OpenVPN client and guide\n' +
         'https://openvpn.net/vpn-client/'
     );
@@ -105,12 +111,12 @@ bot.command('list', log, adminAuth, async (ctx) => {
     try {
         const files = fs.readdirSync(ovpnPath);
         if (files.length) {
-            ctx.reply(files.map((v,i) => `${i}. ${v}`).join('\n'));
+            await ctx.reply(files.map((v,i) => `${i}. ${v}`).join('\n'));
         } else {
-            ctx.reply("no clients");
+            await ctx.reply("no clients");
         }
     } catch (err) {
-        ctx.reply("failed");
+        await ctx.reply("failed");
         logger.error(err);
     }
 });
@@ -121,21 +127,21 @@ bot.command('revoke', log, adminAuth, async (ctx) => {
         const filename = files[num];
         if (filename) {
             childProcess.execSync(`MENU_OPTION="2" CLIENT="${filename.slice(0,-5)}" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
-            ctx.reply(filename + " revoked.");
+            await ctx.reply(filename + " revoked.");
         } else {
-            ctx.reply("wrong command");
+            await ctx.reply("wrong command");
         }
     } catch (err) {
-        ctx.reply("failed");
+        await ctx.reply("failed");
         logger.error(err);
     }
 });
 bot.command('install', log, adminAuth, async (ctx) => {
     try {
         childProcess.execSync(`AUTO_INSTALL=y DNS="9" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
-        ctx.reply("installed");
+        await ctx.reply("installed");
     } catch (err) {
-        ctx.reply("failed");
+        await ctx.reply("failed");
         logger.error(err);
     }
 });
