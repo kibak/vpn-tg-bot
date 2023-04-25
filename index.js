@@ -34,7 +34,7 @@ async function log(ctx, next) {
     await next();
 }
 async function adminAuth(ctx, next) {
-    if (ctx.chat.type !== 'private') return await ctx.reply("пиши в личку бота");
+    if (ctx.chat.type !== 'private') return await ctx.reply("write in private");
     if (adminIds.includes(ctx.from.id)) {
         await next();
     } else {
@@ -42,7 +42,7 @@ async function adminAuth(ctx, next) {
     }
 }
 async function userAuth(ctx, next) {
-    if (ctx.chat.type !== 'private') return await ctx.reply("пиши в личку бота");
+    if (ctx.chat.type !== 'private') return await ctx.reply("write in private");
     if (adminIds.includes(ctx.from.id)) {
         await next();
     } else {
@@ -111,7 +111,7 @@ bot.command('list', log, adminAuth, async (ctx) => {
     try {
         const files = await fs.readdir(ovpnPath);
         if (files.length) {
-            await ctx.reply(files.map((v,i) => `${i}. ${v}`).join('\n'));
+            await ctx.reply(files.map((v,i) => `--- ${i} ---\n${v}`).join('\n'));
         } else {
             await ctx.reply("no clients");
         }
