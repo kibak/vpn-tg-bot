@@ -27,7 +27,7 @@ const adminIds = BOT_ADMIN_IDS.split(',').map(v => Number(v)).filter(v => v);
 logger.info("Bot admins: " + adminIds);
 
 function fixFilename(str) {
-    return str.replace(/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/g, '_');
+    return str.replace(/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/g, '');
 }
 async function log(ctx, next) {
     logger.info(`${ctx.message.text} | ${ctx.from.first_name || ''} ${ctx.from.last_name || ''} #${ctx.from.id} @${ctx.from.username}`);
