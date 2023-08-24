@@ -48,7 +48,7 @@ async function userAuth(ctx, next) {
     } else {
         try {
             const member = await ctx.telegram.getChatMember(BOT_USERS_GROUP_ID, ctx.from.id);
-            if (member) {
+            if (member && member.status !== 'left') {
                 await next();
             } else {
                 await ctx.reply("deprecated bot");
