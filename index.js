@@ -70,6 +70,7 @@ bot.command('start', log, userAuth, async (ctx) => {
     const adminReply = userReply +
         '/list - all clients\n---\n' +
         '/revoke {num} - remove client by number\n---\n---\n' +
+        '/create {client_name} - add new client\n---\n---\n' +
         '/install - install openvpn on server\n---\n';
 
     await ctx.reply(adminIds.includes(ctx.from.id) ? adminReply : userReply);
@@ -130,6 +131,28 @@ bot.command('revoke', log, adminAuth, async (ctx) => {
             await ctx.reply(filename + " revoked.");
         } else {
             await ctx.reply("wrong command");
+        }
+    } catch (err) {
+        await ctx.reply("failed");
+        logger.error(err);
+    }
+});
+bot.command('create', log, adminAuth, async (ctx) => {
+    try {
+        const clientName = fixFilename(ctx.message.text.split(" ").pop() || "");
+        if (!clientName) {
+            await ctx.reply("failed, empty filename");
+        }
+        const files = await fs.readdir(ovpnPath);
+        const filename = files.find(n => clientName + '.ovpn' === n);
+        if (filename) {
+            await ctx.reply("wrong client name, already exist: " + filename);
+        } else {
+            await exec(`MENU_OPTION="1" CLIENT="${clientName}" PASS="1" OVPN_PATH="${ovpnPath}" bash ./openvpn-install.sh`);
+            await ctx.replyWithDocument({
+                source: path.join(ovpnPath, clientName + '.ovpn'),
+                filename: `${clientName}.ovpn`
+            });
         }
     } catch (err) {
         await ctx.reply("failed");
